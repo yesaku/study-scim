@@ -1,0 +1,11 @@
+apiVersion: v2
+name: study-scim
+description: SCIM 2.0 provisioning study app with PostgreSQL and Valkey
+type: application
+version: 0.1.0
+appVersion: "0.0.1"
+
+dependencies:
+  - name: postgresql
+    version: "18.7.8"
+    repository: "oci://registry-1.docker.io/bitnamicharts"

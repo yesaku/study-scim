@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "study-scim.fullname" . }}
+  labels:
+    {{- include "study-scim.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "study-scim.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "study-scim.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          {{- if .Values.app.localMount.enabled }}
+          command: ["java", "-jar", "{{ .Values.app.localMount.jarPath }}"]
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.app.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "study-scim.fullname" . }}
+          env:
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "study-scim.fullname" . }}
+                  key: db-username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "study-scim.fullname" . }}
+                  key: db-password
+            - name: SCIM_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "study-scim.fullname" . }}
+                  key: bearer-token
+          {{- if .Values.app.localMount.enabled }}
+          volumeMounts:
+            - name: backend
+              mountPath: /mnt/backend
+              readOnly: true
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.app.resources | nindent 12 }}
+      {{- if .Values.app.localMount.enabled }}
+      volumes:
+        - name: backend
+          hostPath:
+            path: /mnt/backend
+            type: Directory
+      {{- end }}

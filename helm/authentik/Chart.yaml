@@ -1,0 +1,10 @@
+apiVersion: v2
+name: authentik
+description: Authentik for local SCIM provisioning test
+type: application
+version: 0.1.0
+
+dependencies:
+  - name: authentik
+    version: "2026.5.3"
+    repository: "https://charts.goauthentik.io"

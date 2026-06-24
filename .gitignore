@@ -1,0 +1,39 @@
+### Gradle ###
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### VS Code ###
+.vscode/
+
+### Kotlin ###
+.kotlin
+
+### Spring ###
+.apt_generated
+.springBeans
+.sts4-cache
+
+### macOS ###
+.DS_Store
+
+### Helm ###
+# 依存チャートは helm dependency update で生成するためコミットしない
+helm/*/charts/
+helm/*/Chart.lock
+
+### Local overrides ###
+# 本番用の機密情報を上書きするローカルファイル
+values.local.yaml
+values.*.local.yaml

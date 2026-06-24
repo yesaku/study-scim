@@ -1,0 +1,43 @@
+app:
+  image:
+    repository: study-scim
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  port: 8080
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  scimBaseUrl: "http://scim.local"
+  bearerToken: "changeme-replace-with-strong-token"
+  localMount:
+    enabled: true
+    jarPath: /mnt/backend/study-scim-0.0.1-SNAPSHOT.jar
+
+ingress:
+  enabled: true
+  className: traefik
+  host: scim.local
+  annotations: {}
+  tls:
+    enabled: false
+
+certManager:
+  createLocalIssuer: false
+
+postgresql:
+  auth:
+    database: scimdb
+    username: scim
+    password: scim-secret
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi

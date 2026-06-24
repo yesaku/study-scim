@@ -1,0 +1,10 @@
+{{- if .Values.certManager.createLocalIssuer }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.certManager.localIssuerName }}
+  labels:
+    {{- include "study-scim.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+{{- end }}

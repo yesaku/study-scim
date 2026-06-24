@@ -1,0 +1,20 @@
+authentik:
+  authentik:
+    secret_key: "local-dev-secret-key-change-in-production"
+    log_level: info
+    postgresql:
+      password: "authentik-secret"
+
+  postgresql:
+    enabled: true
+    auth:
+      database: authentik
+      username: authentik
+      password: "authentik-secret"
+
+  server:
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      hosts:
+        - authentik.local
