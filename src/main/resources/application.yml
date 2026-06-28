@@ -24,8 +24,12 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,loggers
 
 scim:
   base-url: ${SCIM_BASE_URL:http://localhost:8080}
   bearer-token: ${SCIM_BEARER_TOKEN:changeme}
+
+logging:
+  level:
+    com.study.studyscim.ScimRequestLoggingFilter: DEBUG
