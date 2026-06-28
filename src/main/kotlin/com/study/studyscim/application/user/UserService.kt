@@ -2,72 +2,60 @@ package com.study.studyscim.application.user
 
 import com.study.studyscim.domain.user.User
 import com.study.studyscim.domain.user.UserRepository
-import com.study.studyscim.presentation.scim.shared.*
-import com.study.studyscim.presentation.scim.user.dto.*
+import com.study.studyscim.presentation.scim.shared.ScimListResponse
+import com.unboundid.scim2.common.filters.Filter
+import com.unboundid.scim2.common.filters.FilterType
+import com.unboundid.scim2.common.messages.PatchRequest
+import com.unboundid.scim2.common.types.Email
+import com.unboundid.scim2.common.types.Meta
+import com.unboundid.scim2.common.types.Name
+import com.unboundid.scim2.common.types.UserResource
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.Instant
-import java.time.format.DateTimeFormatter
+import java.net.URI
 import java.util.UUID
 
 @Service
 class UserService(
     private val userRepository: UserRepository,
-    @Value("\${scim.base-url}") private val baseUrl: String,
+    @Value($$"${scim.base-url}") private val baseUrl: String,
 ) {
 
-    fun listUsers(filter: String?, startIndex: Int, count: Int): ScimListResponse<ScimUserResponse> {
+    fun listUsers(filter: String?, startIndex: Int, count: Int): ScimListResponse<UserResource> {
         val users = if (filter != null) parseAndApplyFilter(filter) else userRepository.findAll()
         val page = users.drop(startIndex - 1).take(count)
         return ScimListResponse(
             totalResults = users.size,
             startIndex = startIndex,
             itemsPerPage = page.size,
-            Resources = page.map { toScimResponse(it) },
+            Resources = page.map { toScimResource(it) },
         )
     }
 
     @Transactional
-    fun createUser(request: ScimUserRequest): ScimUserResponse {
-        val user = User(
-            externalId = request.externalId,
-            userName = request.userName,
-            givenName = request.name?.givenName,
-            familyName = request.name?.familyName,
-            displayName = request.displayName ?: buildDisplayName(request.name),
-            email = request.primaryEmail(),
-            active = request.active,
-        )
-        return toScimResponse(userRepository.save(user))
-    }
+    fun createUser(resource: UserResource): UserResource =
+        toScimResource(userRepository.save(User.from(resource)))
 
-    fun getUser(id: UUID): ScimUserResponse {
+    fun getUser(id: UUID): UserResource {
         val user = userRepository.findByIdOrNull(id) ?: throw UserNotFoundException("User $id not found")
-        return toScimResponse(user)
+        return toScimResource(user)
     }
 
     @Transactional
-    fun replaceUser(id: UUID, request: ScimUserRequest): ScimUserResponse {
+    fun replaceUser(id: UUID, resource: UserResource): UserResource {
         val user = userRepository.findByIdOrNull(id) ?: throw UserNotFoundException("User $id not found")
-        user.externalId = request.externalId
-        user.userName = request.userName
-        user.givenName = request.name?.givenName
-        user.familyName = request.name?.familyName
-        user.displayName = request.displayName ?: buildDisplayName(request.name)
-        user.email = request.primaryEmail()
-        user.active = request.active
-        user.updatedAt = Instant.now()
-        return toScimResponse(userRepository.save(user))
+        user.applyReplace(resource)
+        return toScimResource(userRepository.save(user))
     }
 
     @Transactional
-    fun patchUser(id: UUID, request: ScimPatchRequest): ScimUserResponse {
+    fun patchUser(id: UUID, patchRequest: PatchRequest): UserResource {
         val user = userRepository.findByIdOrNull(id) ?: throw UserNotFoundException("User $id not found")
-        request.Operations.forEach { applyPatchOperation(user, it) }
-        user.updatedAt = Instant.now()
-        return toScimResponse(userRepository.save(user))
+        val updated = patchRequest.applyToResource(toScimResource(user))
+        user.applyPatch(updated)
+        return toScimResource(userRepository.save(user))
     }
 
     @Transactional
@@ -77,65 +65,53 @@ class UserService(
     }
 
     private fun parseAndApplyFilter(filter: String): List<User> {
-        val match = Regex("""(\w+)\s+eq\s+"([^"]+)"""").find(filter) ?: return userRepository.findAll()
-        return when (match.groupValues[1].lowercase()) {
-            "username" -> listOfNotNull(userRepository.findByUserName(match.groupValues[2]))
-            "externalid" -> listOfNotNull(userRepository.findByExternalId(match.groupValues[2]))
+        return try {
+            applyScimFilter(Filter.fromString(filter))
+        } catch (_: Exception) {
+            userRepository.findAll()
+        }
+    }
+
+    private fun applyScimFilter(filter: Filter): List<User> {
+        if (filter.filterType != FilterType.EQUAL) return userRepository.findAll()
+        val attrName = filter.attributePath?.toString()?.lowercase() ?: return userRepository.findAll()
+        val value = filter.comparisonValue?.asString() ?: return userRepository.findAll()
+        return when (attrName) {
+            "username" -> listOfNotNull(userRepository.findByUserName(value))
+            "externalid" -> listOfNotNull(userRepository.findByExternalId(value))
             else -> userRepository.findAll()
         }
     }
 
-    private fun applyPatchOperation(user: User, op: ScimPatchOperation) {
-        val path = op.path?.lowercase() ?: return
-        val value = op.value?.toString()
-        when (op.op.lowercase()) {
-            "replace", "add" -> when {
-                path == "active" -> user.active = value?.lowercase() != "false"
-                path == "username" -> value?.let { user.userName = it }
-                path == "displayname" -> user.displayName = value
-                path == "name.givenname" -> user.givenName = value
-                path == "name.familyname" -> user.familyName = value
-                path == "externalid" -> user.externalId = value
-                path.contains("emails") -> user.email = value
-            }
-            "remove" -> when (path) {
-                "active" -> user.active = false
-                "displayname" -> user.displayName = null
-            }
-        }
-    }
+    fun toScimResource(user: User): UserResource {
+        val resource = UserResource()
+        resource.id = user.id.toString()
+        resource.externalId = user.externalId
+        resource.userName = user.userName
 
-    private fun buildDisplayName(name: ScimName?): String? =
-        listOfNotNull(name?.givenName, name?.familyName).joinToString(" ").ifBlank { null }
-
-    private fun ScimUserRequest.primaryEmail(): String? =
-        emails?.firstOrNull { it.primary }?.value ?: emails?.firstOrNull()?.value
-
-    fun toScimResponse(user: User): ScimUserResponse {
-        val formatter = DateTimeFormatter.ISO_INSTANT
-        val name = if (user.givenName != null || user.familyName != null) {
-            ScimName(
-                formatted = listOfNotNull(user.givenName, user.familyName).joinToString(" "),
-                givenName = user.givenName,
-                familyName = user.familyName,
+        if (user.givenName != null || user.familyName != null) {
+            resource.setName(
+                Name()
+                    .setFormatted(listOfNotNull(user.givenName, user.familyName).joinToString(" "))
+                    .setGivenName(user.givenName)
+                    .setFamilyName(user.familyName),
             )
-        } else null
+        }
 
-        return ScimUserResponse(
-            id = user.id.toString(),
-            externalId = user.externalId,
-            userName = user.userName,
-            name = name,
-            displayName = user.displayName,
-            emails = user.email?.let { listOf(ScimEmail(value = it)) },
-            active = user.active,
-            meta = ScimMeta(
-                resourceType = "User",
-                created = formatter.format(user.createdAt),
-                lastModified = formatter.format(user.updatedAt),
-                location = "$baseUrl/scim/v2/Users/${user.id}",
-                version = "W/\"${user.updatedAt.toEpochMilli()}\"",
-            ),
-        )
+        user.displayName?.let { resource.setDisplayName(it) }
+        resource.setActive(user.active)
+
+        user.email?.let {
+            resource.setEmails(Email().setValue(it).setType("work").setPrimary(true))
+        }
+
+        resource.meta = Meta()
+            .setResourceType("User")
+            .setCreatedMillis(user.createdAt.toEpochMilli())
+            .setLastModifiedMillis(user.updatedAt.toEpochMilli())
+            .setLocation(URI.create("$baseUrl/scim/v2/Users/${user.id}"))
+            .setVersion("W/\"${user.updatedAt.toEpochMilli()}\"")
+
+        return resource
     }
 }

@@ -2,9 +2,8 @@ package com.study.studyscim.presentation.scim.user
 
 import com.study.studyscim.application.user.UserService
 import com.study.studyscim.presentation.scim.shared.ScimListResponse
-import com.study.studyscim.presentation.scim.user.dto.ScimPatchRequest
-import com.study.studyscim.presentation.scim.user.dto.ScimUserRequest
-import com.study.studyscim.presentation.scim.user.dto.ScimUserResponse
+import com.unboundid.scim2.common.messages.PatchRequest
+import com.unboundid.scim2.common.types.UserResource
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import java.util.UUID
@@ -18,18 +17,18 @@ class ScimUserController(private val userService: UserService) {
         @RequestParam(required = false) filter: String?,
         @RequestParam(defaultValue = "1") startIndex: Int,
         @RequestParam(defaultValue = "100") count: Int,
-    ): ScimListResponse<ScimUserResponse> = userService.listUsers(filter, startIndex, count)
+    ): ScimListResponse<UserResource> = userService.listUsers(filter, startIndex, count)
 
     @PostMapping(
         consumes = ["application/scim+json", "application/json"],
         produces = ["application/scim+json", "application/json"],
     )
     @ResponseStatus(HttpStatus.CREATED)
-    fun createUser(@RequestBody request: ScimUserRequest): ScimUserResponse =
-        userService.createUser(request)
+    fun createUser(@RequestBody resource: UserResource): UserResource =
+        userService.createUser(resource)
 
     @GetMapping("/{id}", produces = ["application/scim+json", "application/json"])
-    fun getUser(@PathVariable id: UUID): ScimUserResponse =
+    fun getUser(@PathVariable id: UUID): UserResource =
         userService.getUser(id)
 
     @PutMapping(
@@ -37,15 +36,15 @@ class ScimUserController(private val userService: UserService) {
         consumes = ["application/scim+json", "application/json"],
         produces = ["application/scim+json", "application/json"],
     )
-    fun replaceUser(@PathVariable id: UUID, @RequestBody request: ScimUserRequest): ScimUserResponse =
-        userService.replaceUser(id, request)
+    fun replaceUser(@PathVariable id: UUID, @RequestBody resource: UserResource): UserResource =
+        userService.replaceUser(id, resource)
 
     @PatchMapping(
         "/{id}",
         consumes = ["application/scim+json", "application/json"],
         produces = ["application/scim+json", "application/json"],
     )
-    fun patchUser(@PathVariable id: UUID, @RequestBody request: ScimPatchRequest): ScimUserResponse =
+    fun patchUser(@PathVariable id: UUID, @RequestBody request: PatchRequest): UserResource =
         userService.patchUser(id, request)
 
     @DeleteMapping("/{id}")

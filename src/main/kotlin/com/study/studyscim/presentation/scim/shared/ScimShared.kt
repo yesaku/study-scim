@@ -1,25 +1,5 @@
 package com.study.studyscim.presentation.scim.shared
 
-data class ScimName(
-    val formatted: String? = null,
-    val givenName: String? = null,
-    val familyName: String? = null,
-)
-
-data class ScimEmail(
-    val value: String,
-    val type: String = "work",
-    val primary: Boolean = true,
-)
-
-data class ScimMeta(
-    val resourceType: String,
-    val created: String,
-    val lastModified: String,
-    val location: String,
-    val version: String,
-)
-
 data class ScimError(
     val schemas: List<String> = listOf("urn:ietf:params:scim:api:messages:2.0:Error"),
     val status: String,
