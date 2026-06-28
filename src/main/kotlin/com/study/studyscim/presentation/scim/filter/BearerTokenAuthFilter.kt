@@ -1,4 +1,4 @@
-package com.study.studyscim.presentation.filter
+package com.study.studyscim.presentation.scim.filter
 
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest

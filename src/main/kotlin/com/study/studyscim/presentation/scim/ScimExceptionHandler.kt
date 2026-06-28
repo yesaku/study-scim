@@ -1,17 +1,17 @@
 package com.study.studyscim.presentation.scim
 
-import com.study.studyscim.application.user.ScimNotFoundException
-import com.study.studyscim.presentation.scim.dto.ScimError
+import com.study.studyscim.application.user.UserNotFoundException
+import com.study.studyscim.presentation.scim.shared.ScimError
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = ["com.study.studyscim.presentation.scim"])
 class ScimExceptionHandler {
 
-    @ExceptionHandler(ScimNotFoundException::class)
-    fun handleNotFound(ex: ScimNotFoundException): ResponseEntity<ScimError> =
+    @ExceptionHandler(UserNotFoundException::class)
+    fun handleNotFound(ex: UserNotFoundException): ResponseEntity<ScimError> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
             ScimError(status = "404", scimType = "noTarget", detail = ex.message ?: "Not found"),
         )

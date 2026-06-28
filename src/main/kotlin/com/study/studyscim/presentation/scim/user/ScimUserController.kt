@@ -1,7 +1,10 @@
-package com.study.studyscim.presentation.scim
+package com.study.studyscim.presentation.scim.user
 
 import com.study.studyscim.application.user.UserService
-import com.study.studyscim.presentation.scim.dto.*
+import com.study.studyscim.presentation.scim.shared.ScimListResponse
+import com.study.studyscim.presentation.scim.user.dto.ScimPatchRequest
+import com.study.studyscim.presentation.scim.user.dto.ScimUserRequest
+import com.study.studyscim.presentation.scim.user.dto.ScimUserResponse
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import java.util.UUID

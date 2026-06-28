@@ -2,7 +2,8 @@ package com.study.studyscim.application.user
 
 import com.study.studyscim.domain.user.User
 import com.study.studyscim.domain.user.UserRepository
-import com.study.studyscim.presentation.scim.dto.*
+import com.study.studyscim.presentation.scim.shared.*
+import com.study.studyscim.presentation.scim.user.dto.*
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -43,13 +44,13 @@ class UserService(
     }
 
     fun getUser(id: UUID): ScimUserResponse {
-        val user = userRepository.findByIdOrNull(id) ?: throw ScimNotFoundException("User $id not found")
+        val user = userRepository.findByIdOrNull(id) ?: throw UserNotFoundException("User $id not found")
         return toScimResponse(user)
     }
 
     @Transactional
     fun replaceUser(id: UUID, request: ScimUserRequest): ScimUserResponse {
-        val user = userRepository.findByIdOrNull(id) ?: throw ScimNotFoundException("User $id not found")
+        val user = userRepository.findByIdOrNull(id) ?: throw UserNotFoundException("User $id not found")
         user.externalId = request.externalId
         user.userName = request.userName
         user.givenName = request.name?.givenName
@@ -63,7 +64,7 @@ class UserService(
 
     @Transactional
     fun patchUser(id: UUID, request: ScimPatchRequest): ScimUserResponse {
-        val user = userRepository.findByIdOrNull(id) ?: throw ScimNotFoundException("User $id not found")
+        val user = userRepository.findByIdOrNull(id) ?: throw UserNotFoundException("User $id not found")
         request.Operations.forEach { applyPatchOperation(user, it) }
         user.updatedAt = Instant.now()
         return toScimResponse(userRepository.save(user))
@@ -71,7 +72,7 @@ class UserService(
 
     @Transactional
     fun deleteUser(id: UUID) {
-        if (!userRepository.existsById(id)) throw ScimNotFoundException("User $id not found")
+        if (!userRepository.existsById(id)) throw UserNotFoundException("User $id not found")
         userRepository.deleteById(id)
     }
 
@@ -138,5 +139,3 @@ class UserService(
         )
     }
 }
-
-class ScimNotFoundException(message: String) : RuntimeException(message)
