@@ -1,0 +1,35 @@
+sequenceDiagram
+    participant PS as プロビジョニングサービス
+    participant Src as ソースシステム（Entra ID）
+    participant Tgt as ターゲットシステム（SaaSアプリ）
+
+    Note over PS,Tgt: 初回サイクル（Initial Cycle）
+
+    PS->>Src: ① 全ユーザー・グループを取得<br>（属性マッピングで定義された全属性）
+    Src-->>PS: ユーザー・グループ一覧（全属性付き）
+
+    Note over PS: ② スコープフィルター適用<br>アサイン or 属性ベースのフィルターで絞り込み<br>対象外はスキップ
+
+    loop 対象ユーザー・グループごとに繰り返し
+
+        PS->>Tgt: ③ 照合属性でユーザーを検索<br>例: userPrincipalName → userName
+        Tgt-->>PS: 検索結果
+
+        alt 一致するユーザーが存在しない
+            PS->>Tgt: ④ ユーザーを新規作成<br>（ソース属性をマッピングして送信）
+            Tgt-->>PS: 作成完了（ターゲットIDを返す）
+            Note over PS: ターゲットIDを検出・キャッシュ<br>以降の全操作でこのIDを使用
+        else 一致するユーザーが存在する
+            PS->>Tgt: ⑤ ユーザー属性を更新<br>（ソース属性をマッピングして送信）
+            Tgt-->>PS: 更新完了（ターゲットIDを返す）
+            Note over PS: ターゲットIDを検出・キャッシュ<br>以降の全操作でこのIDを使用
+        end
+
+        opt 参照属性がマッピングに含まれる場合<br>例: Manager（上司）
+            PS->>Tgt: ⑥ 参照オブジェクトを作成・リンク<br>例: 上司ユーザーとの紐付け
+            Tgt-->>PS: リンク完了
+        end
+
+    end
+
+    Note over PS: ⑦ ウォーターマークを保存<br>増分サイクル（Incremental Cycle）の起点となる
